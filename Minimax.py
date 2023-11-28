@@ -145,7 +145,7 @@ def terminal(row_state, col_state):
 def utility(board_status):
     ai_score = np.count_nonzero(board_status == 4)
     player_score = np.count_nonzero(board_status == -4)
-    if np.count_nonzero(board_status < -4) > 0 or np.count_nonzero(board_status > 4) > 0  :
+    if np.count_nonzero(board_status < -4) > 0 or np.count_nonzero(board_status > 4) > 0 :
         print(board_status)
     return ai_score - player_score
 
