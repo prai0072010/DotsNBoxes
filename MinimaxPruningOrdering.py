@@ -24,12 +24,8 @@ def mini_max(row_state, col_state, board_status, already_scored, depth):
     
     player_turn = False
     axis = 'row'
-    for r, c in successors(row_state):
-        # print('Thinking at ',(axis, r, c))
-        move = row_state.copy()
-        move[r][c] = 1
-        is_score, new_board_status, new_already_scored = scoring(axis, r, c, board_status.copy(), already_scored.copy(), player_turn)
-        if is_score :
+    for (r, c, move, is_score, new_board_status, new_already_scored) in successors(row_state, axis, board_status, already_scored, player_turn):
+        if is_score:
             eval = max_value(move, col_state, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
         else:
             eval = min_value(move, col_state, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
@@ -44,12 +40,8 @@ def mini_max(row_state, col_state, board_status, already_scored, depth):
             break
 
     axis = 'col'
-    for r, c in successors(col_state):
-        # print('Thinking at ',(axis, r, c))
-        move = col_state.copy()
-        move[r][c] = 1
-        is_score, new_board_status, new_already_scored = scoring(axis, r, c, board_status.copy(), already_scored.copy(), player_turn)
-        if is_score :
+    for (r, c, move, is_score, new_board_status, new_already_scored) in successors(col_state, axis, board_status, already_scored, player_turn):
+        if is_score:
             eval = max_value(row_state, move, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
         else:
             eval = min_value(row_state, move, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
@@ -75,11 +67,8 @@ def min_value(row_state, col_state, board_status, already_scored, is_score, alph
     
     min_eval = float('inf')
     axis = 'row'
-    for r, c in successors(row_state):
-        move = row_state.copy()
-        move[r][c] = 1
-        is_score, new_board_status, new_already_scored = scoring(axis, r, c, board_status.copy(), already_scored.copy(), player_turn)
-        if is_score :
+    for (_, _, move, is_score, new_board_status, new_already_scored) in successors(row_state, axis, board_status, already_scored, player_turn):
+        if is_score:
             eval = min_value(move, col_state, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
         else:
             eval = max_value(move, col_state, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
@@ -92,11 +81,8 @@ def min_value(row_state, col_state, board_status, already_scored, is_score, alph
             break
 
     axis = 'col'
-    for r, c in successors(col_state):
-        move = col_state.copy()
-        move[r][c] = 1
-        is_score, new_board_status, new_already_scored = scoring(axis, r, c, board_status.copy(), already_scored.copy(), player_turn)
-        if is_score :
+    for (_, _, move, is_score, new_board_status, new_already_scored) in successors(col_state, axis, board_status, already_scored, player_turn):
+        if is_score:
             eval = min_value(row_state, move, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
         else:
             eval = max_value(row_state, move, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
@@ -121,11 +107,8 @@ def max_value(row_state, col_state, board_status, already_scored, is_score, alph
 
     max_eval = -float('inf')
     axis = 'row'
-    for r, c in successors(row_state):
-        move = row_state.copy()
-        move[r][c] = 1
-        is_score, new_board_status, new_already_scored = scoring(axis, r, c, board_status.copy(), already_scored.copy(), player_turn)
-        if is_score :
+    for (_, _, move, is_score, new_board_status, new_already_scored) in successors(row_state, axis, board_status, already_scored, player_turn):
+        if is_score:
             eval = max_value(move, col_state, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
         else:
             eval = min_value(move, col_state, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
@@ -138,11 +121,8 @@ def max_value(row_state, col_state, board_status, already_scored, is_score, alph
             break
 
     axis = 'col'
-    for r, c in successors(col_state):
-        move = col_state.copy()
-        move[r][c] = 1
-        is_score, new_board_status, new_already_scored = scoring(axis, r, c, board_status.copy(), already_scored.copy(), player_turn)
-        if is_score :
+    for (_, _, move, is_score, new_board_status, new_already_scored) in successors(col_state, axis, board_status, already_scored, player_turn):
+        if is_score:
             eval = max_value(row_state, move, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
         else:
             eval = min_value(row_state, move, new_board_status, new_already_scored, is_score, alpha, beta, depth-1)
@@ -156,13 +136,21 @@ def max_value(row_state, col_state, board_status, already_scored, is_score, alph
 
     return max_eval
 
-def successors(state):
-    moves = []
+def successors(state, axis, board_status, already_scored, player_turn):
+    score_moves = []
+    no_score_moves = []
     for r in range(state.shape[0]):
         for c in range(state.shape[1]):
             if state[r][c] != 1:
-                moves.append((r, c))
-    return moves
+                is_score, new_board_status, new_already_scored = scoring(axis, r, c, board_status.copy(), already_scored.copy(), player_turn)
+                move = state.copy()
+                move[r][c] = 1
+                if is_score:
+                    score_moves.append((r, c, move, is_score, new_board_status, new_already_scored))
+                else: 
+                    no_score_moves.append((r, c, move, is_score, new_board_status, new_already_scored))
+
+    return score_moves + no_score_moves
 
 def terminal(row_state, col_state, board_status):
     board_full = ((row_state == 1).all() and (col_state == 1).all()) 
@@ -175,6 +163,9 @@ def utility(board_status, is_score, player_turn):
     player_score = np.count_nonzero(board_status == -4) * -100
 
     game_score = ai_score + player_score
+
+    if np.count_nonzero(board_status < -4) > 0 or np.count_nonzero(board_status > 4) > 0 :
+        print(board_status)
 
     if is_score:
         multiplier = 1 if not player_turn else -1
