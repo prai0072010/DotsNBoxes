@@ -4,6 +4,7 @@ import numpy as np
 import time
 import Minimax
 import MinimaxPruning
+import MinimaxPruningOrdering
 
 class DotsNBoxes():
     size_of_board = 600
@@ -21,11 +22,7 @@ class DotsNBoxes():
     edge_width = 0.1*size_of_board/number_of_dots
     distance_between_dots = size_of_board / (number_of_dots)
     minimax_depth = 6
-    # minimax_depth = round((((number_of_dots-1)**2)/2)+1)
 
-    # ------------------------------------------------------------------
-    # Initialization functions
-    # ------------------------------------------------------------------
     def __init__(self):
         self.window = Tk()
         self.window.title('DotsNBoxes')
@@ -36,6 +33,12 @@ class DotsNBoxes():
         self.refresh_board()
         self.play_again()
         print("minimax_depth: ", self.minimax_depth)
+        
+    # --------------------------------------
+    # common function
+    # --------------------------------------
+    def mainloop(self):
+        self.window.mainloop()
 
     def play_again(self):
         self.refresh_board()
@@ -47,8 +50,6 @@ class DotsNBoxes():
         self.player_score = 0
         self.computer_score = 0
         
-        # Input from user in form of clicks
-        # self.player_starts = not self.player_starts
         self.player_turn = not self.player_starts
         self.reset_board = False
         self.turntext_handle = []
@@ -56,13 +57,8 @@ class DotsNBoxes():
         self.already_marked_boxes = []
         self.display_turn_text()
 
-    def mainloop(self):
-        self.window.mainloop()
-
-    # # ------------------------------------------------------------------
-    # # Logical Functions:
-    # # The modules required to carry out game logic
-    # # ------------------------------------------------------------------
+    def is_gameover(self):
+        return (self.row_status == 1).all() and (self.col_status == 1).all()
 
     def convert_grid_to_logical_position(self, grid_position):
         grid_position = np.array(grid_position)
@@ -115,6 +111,43 @@ class DotsNBoxes():
             if c >= 1:
                 self.board_status[r][c-1] += 1
 
+    def write_game_log(self):
+        lines = self.move_log.split('\n')
+        player_text = '\n'.join([line for line in lines if 'player' in line.lower()])
+        computer_text = '\n'.join([line for line in lines if 'computer' in line.lower()])
+        seperate_line = f"\n{'-'*25}\n"
+        with open('last_game_log.txt', 'w') as file:
+            log_text = "Summary\n" + \
+                        self.move_log +\
+                        seperate_line +\
+                        "Player\n" +\
+                        player_text +\
+                        seperate_line +\
+                        "Computer\n" +\
+                        computer_text
+            file.write(log_text)
+
+    # --------------------------------------
+    # board component
+    # --------------------------------------
+    def make_edge(self, axis, logical_position):
+        if axis == 'row':
+            start_x = self.distance_between_dots/2 + logical_position[1]*self.distance_between_dots
+            end_x = start_x+self.distance_between_dots
+            start_y = self.distance_between_dots/2 + logical_position[0]*self.distance_between_dots
+            end_y = start_y
+        elif axis == 'col':
+            start_y = self.distance_between_dots / 2 + logical_position[0] * self.distance_between_dots
+            end_y = start_y + self.distance_between_dots
+            start_x = self.distance_between_dots / 2 + logical_position[1] * self.distance_between_dots
+            end_x = start_x
+
+        if self.player_turn:
+            color = self.player_color
+        else:
+            color = self.computer_color
+        self.canvas.create_line(start_x, start_y, end_x, end_y, fill=color, width=self.edge_width)
+
     def mark_box(self):
         is_score = False
         if self.player_turn:
@@ -137,66 +170,7 @@ class DotsNBoxes():
                 
         return is_score
 
-    def is_gameover(self):
-        return (self.row_status == 1).all() and (self.col_status == 1).all()
-
-    # # ------------------------------------------------------------------
-    # # Drawing Functions:
-    # # The modules required to draw required game based object on canvas
-    # # ------------------------------------------------------------------
-
-    def make_edge(self, axis, logical_position):
-        if axis == 'row':
-            start_x = self.distance_between_dots/2 + logical_position[1]*self.distance_between_dots
-            end_x = start_x+self.distance_between_dots
-            start_y = self.distance_between_dots/2 + logical_position[0]*self.distance_between_dots
-            end_y = start_y
-        elif axis == 'col':
-            start_y = self.distance_between_dots / 2 + logical_position[0] * self.distance_between_dots
-            end_y = start_y + self.distance_between_dots
-            start_x = self.distance_between_dots / 2 + logical_position[1] * self.distance_between_dots
-            end_x = start_x
-
-        if self.player_turn:
-            color = self.player_color
-        else:
-            color = self.computer_color
-        self.canvas.create_line(start_x, start_y, end_x, end_y, fill=color, width=self.edge_width)
-
-    def display_gameover(self):
-
-        if self.player_score > self.computer_score:
-            text = 'Winner: Player '
-            color = self.player_color
-        elif self.computer_score > self.player_score:
-            text = 'Winner: Computer '
-            color = self.computer_color
-        else:
-            text = 'Its a tie'
-            color = 'gray'
-
-        self.canvas.delete(self.turntext_handle)
-
-        self.create_rectangle(0, 0, self.size_of_board, self.size_of_board, fill='gray', alpha=.8)
-
-        self.canvas.create_text(self.size_of_board / 2, self.size_of_board / 4, font="cmr 40 bold", fill=color, text=text)
-
-        score_text = 'Scores \n'
-        self.canvas.create_text(self.size_of_board / 2, 5 * self.size_of_board / 8, font="cmr 40 bold", fill=self.Green_color,
-                                text=score_text)
-
-        score_text = 'Player : ' + str(self.player_score) + '\n'
-        score_text += 'Computer : ' + str(self.computer_score) + '\n'
-        self.canvas.create_text(self.size_of_board / 2, 3 * self.size_of_board / 4, font="cmr 30 bold", fill=self.Green_color,
-                                text=score_text)
-
-        text = 'Click to play again \n'
-        self.canvas.create_text(self.size_of_board / 2, 15 * self.size_of_board / 16, font="cmr 20 bold", fill="gray",
-                                text=text)
-        
-        self.reset_board = True
-        
-    def create_rectangle(self, x1, y1, x2, y2, **kwargs):
+    def create_alpha_rectangle(self, x1, y1, x2, y2, **kwargs):
         if 'alpha' in kwargs:
             alpha = int(kwargs.pop('alpha') * 255)
             fill = kwargs.pop('fill')
@@ -205,24 +179,6 @@ class DotsNBoxes():
             self.images.append(ImageTk.PhotoImage(image))
             self.canvas.create_image(x1, y1, image=self.images[-1], anchor='nw')
         self.canvas.create_rectangle(x1, y1, x2, y2, **kwargs)
-
-    def refresh_board(self):
-        for i in range(self.number_of_dots):
-            x = i*self.distance_between_dots+self.distance_between_dots/2
-            self.canvas.create_line(x, self.distance_between_dots/2, x,
-                                    self.size_of_board-self.distance_between_dots/2,
-                                    fill='gray', dash = (2, 2))
-            self.canvas.create_line(self.distance_between_dots/2, x,
-                                    self.size_of_board-self.distance_between_dots/2, x,
-                                    fill='gray', dash=(2, 2))
-
-        for i in range(self.number_of_dots):
-            for j in range(self.number_of_dots):
-                start_x = i*self.distance_between_dots+self.distance_between_dots/2
-                end_x = j*self.distance_between_dots+self.distance_between_dots/2
-                self.canvas.create_oval(start_x-self.dot_width/2, end_x-self.dot_width/2, start_x+self.dot_width/2,
-                                        end_x+self.dot_width/2, fill=self.dot_color,
-                                        outline=self.dot_color)
 
     def shade_box(self, box, color):
         start_x = self.distance_between_dots / 2 + box[1] * self.distance_between_dots + self.edge_width/2
@@ -245,23 +201,10 @@ class DotsNBoxes():
                                                        self.size_of_board-self.distance_between_dots/8,
                                                        font="cmr 15 bold",text=text, fill=color)
 
-    def write_game_log(self):
-        lines = self.move_log.split('\n')
-        player_text = '\n'.join([line for line in lines if 'player' in line.lower()])
-        computer_text = '\n'.join([line for line in lines if 'computer' in line.lower()])
-        seperate_line = f"\n{'-'*25}\n"
-        with open('last_game_log.txt', 'w') as file:
-            log_text = "Summary\n" + \
-                        self.move_log +\
-                        seperate_line +\
-                        "Player\n" +\
-                        player_text +\
-                        seperate_line +\
-                        "Computer\n" +\
-                        computer_text
-            file.write(log_text)
-
-    def board_process(self, axis, logical_positon, process_time=None):
+    # --------------------------------------
+    # board state
+    # --------------------------------------
+    def board_process(self, axis, logical_positon, nodes=None, process_time=None):
         if (axis and not self.is_grid_occupied(logical_positon, axis)):
             self.update_board(axis, logical_positon)
             self.make_edge(axis, logical_positon)
@@ -271,7 +214,7 @@ class DotsNBoxes():
             if self.player_turn:
                 self.move_log += f"player: {(axis, logical_positon)}\n"
             else:
-                self.move_log += f"computer: {(axis, logical_positon)} in {process_time} s\n"
+                self.move_log += f"computer: {(axis, logical_positon)} with {str(nodes).rjust(8)} nodes in {process_time} s\n"
 
             if is_score:
                 self.player_turn = self.player_turn
@@ -286,6 +229,59 @@ class DotsNBoxes():
                 time.sleep(0.3)
                 self.display_gameover()
 
+    def refresh_board(self):
+        for i in range(self.number_of_dots):
+            x = i*self.distance_between_dots+self.distance_between_dots/2
+            self.canvas.create_line(x, self.distance_between_dots/2, x,
+                                    self.size_of_board-self.distance_between_dots/2,
+                                    fill='gray', dash = (2, 2))
+            self.canvas.create_line(self.distance_between_dots/2, x,
+                                    self.size_of_board-self.distance_between_dots/2, x,
+                                    fill='gray', dash=(2, 2))
+
+        for i in range(self.number_of_dots):
+            for j in range(self.number_of_dots):
+                start_x = i*self.distance_between_dots+self.distance_between_dots/2
+                end_x = j*self.distance_between_dots+self.distance_between_dots/2
+                self.canvas.create_oval(start_x-self.dot_width/2, end_x-self.dot_width/2, start_x+self.dot_width/2,
+                                        end_x+self.dot_width/2, fill=self.dot_color,
+                                        outline=self.dot_color)
+    
+    def display_gameover(self):
+        if self.player_score > self.computer_score:
+            text = 'Winner: Player '
+            color = self.player_color
+        elif self.computer_score > self.player_score:
+            text = 'Winner: Computer '
+            color = self.computer_color
+        else:
+            text = 'Its a tie'
+            color = 'gray'
+
+        self.canvas.delete(self.turntext_handle)
+
+        self.create_alpha_rectangle(0, 0, self.size_of_board, self.size_of_board, fill='gray', alpha=.8)
+
+        self.canvas.create_text(self.size_of_board / 2, self.size_of_board / 4, font="cmr 40 bold", fill=color, text=text)
+
+        score_text = 'Scores \n'
+        self.canvas.create_text(self.size_of_board / 2, 5 * self.size_of_board / 8, font="cmr 40 bold", fill=self.Green_color,
+                                text=score_text)
+
+        score_text = 'Player : ' + str(self.player_score) + '\n'
+        score_text += 'Computer : ' + str(self.computer_score) + '\n'
+        self.canvas.create_text(self.size_of_board / 2, 3 * self.size_of_board / 4, font="cmr 30 bold", fill=self.Green_color,
+                                text=score_text)
+
+        text = 'Click to play again \n'
+        self.canvas.create_text(self.size_of_board / 2, 15 * self.size_of_board / 16, font="cmr 20 bold", fill="gray",
+                                text=text)
+        
+        self.reset_board = True
+
+    # --------------------------------------
+    # game action
+    # --------------------------------------
     def click(self, event):
         if not self.reset_board:
             if self.player_turn:
@@ -305,15 +301,19 @@ class DotsNBoxes():
             if not self.player_turn:
                 start_time = time.time()
                 # ans = Minimax.mini_max(self.row_status.copy(), self.col_status.copy(), self.board_status.copy(), self.already_marked_boxes.copy(), self.minimax_depth)
-                ans = MinimaxPruning.mini_max(self.row_status.copy(), self.col_status.copy(), self.board_status.copy(), self.already_marked_boxes.copy(), self.minimax_depth)
+                ans, nodes = MinimaxPruning.mini_max(self.row_status.copy(), self.col_status.copy(), self.board_status.copy(), self.already_marked_boxes.copy(), self.minimax_depth)
+                # ans, nodes = MinimaxPruningOrdering.mini_max(self.row_status.copy(), self.col_status.copy(), self.board_status.copy(), self.already_marked_boxes.copy(), self.minimax_depth)
                 # ans = ParallelMinimax.mini_max(self.row_status.copy(), self.col_status.copy(), self.board_status.copy(), self.already_marked_boxes.copy(), self.minimax_depth)
                 process_time = round((time.time() - start_time), 2)
-                print(f"Answer: {ans} in {process_time} seconds")
+                print(f"Answer: {ans} with {str(nodes).rjust(8)} nodes in {process_time} seconds")
                 axis, r, c = ans
                 logical_positon = [r, c]
-                self.board_process(axis, logical_positon, process_time)
+                self.board_process(axis, logical_positon, nodes=nodes, process_time=process_time)
                 time.sleep(0.3)
                 self.window.after(1, self.ai_move)
 
+# --------------------------------------
+# call main game loop
+# --------------------------------------
 game_instance = DotsNBoxes()
 game_instance.mainloop()
